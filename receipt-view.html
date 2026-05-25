@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AUL Hostel Hub | Payment Receipt</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #e8ecf1;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .receipt-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .receipt-header {
+            background: linear-gradient(135deg, #0f0c29, #1a1a3e);
+            padding: 25px;
+            text-align: center;
+            border-bottom: 3px solid #d4af37;
+        }
+        .logo-area { margin-bottom: 15px; }
+        .logo-area img { max-height: 65px; width: auto; }
+        .receipt-header h1 { color: white; font-size: 26px; font-weight: 700; }
+        .receipt-header p { color: #c4b5fd; font-size: 12px; margin-top: 5px; }
+        .paid-badge {
+            display: inline-block;
+            background: #d4af37;
+            color: #0f0c29;
+            padding: 4px 20px;
+            border-radius: 30px;
+            font-size: 11px;
+            font-weight: 700;
+            margin-top: 12px;
+        }
+        .receipt-body { padding: 25px; }
+        .receipt-title {
+            text-align: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px dashed #ddd;
+        }
+        .receipt-title h2 { color: #1e293b; font-size: 22px; }
+        .receipt-title p { color: #64748b; font-size: 12px; margin-top: 5px; word-break: break-all; }
+        .info-box {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 18px;
+            margin-bottom: 20px;
+        }
+        .info-box h3 {
+            color: #1e293b;
+            font-size: 15px;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        .info-item { display: flex; flex-direction: column; }
+        .info-label {
+            font-size: 10px;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+        }
+        .info-value {
+            font-size: 13px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-top: 3px;
+        }
+        .trans-box {
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 18px;
+            margin-bottom: 20px;
+        }
+        .trans-box h3 {
+            color: #1e293b;
+            font-size: 15px;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        .trans-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .trans-label { font-size: 13px; color: #64748b; }
+        .trans-value { font-size: 14px; font-weight: 700; color: #1e293b; }
+        .amount-value { font-size: 20px; color: #10b981; }
+        .payment-badge {
+            padding: 5px 12px;
+            border-radius: 30px;
+            font-size: 11px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .badge-wallet { background: #dbeafe; color: #2563eb; }
+        .qr-box {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+        }
+        .qr-code {
+            background: white;
+            padding: 12px;
+            border-radius: 12px;
+            display: inline-block;
+        }
+        .qr-box p { font-size: 11px; color: #64748b; margin-top: 10px; }
+        .footer {
+            background: #f8fafc;
+            padding: 15px 25px;
+            text-align: center;
+            border-top: 1px solid #e2e8f0;
+        }
+        .footer p { font-size: 10px; color: #64748b; margin: 3px 0; }
+        .action-buttons {
+            max-width: 900px;
+            margin: 20px auto 0;
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 10px 24px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+        .btn-download { background: #10b981; color: white; }
+        .btn-download:hover { background: #059669; transform: translateY(-1px); }
+        .btn-print { background: #3b82f6; color: white; }
+        .btn-print:hover { background: #2563eb; transform: translateY(-1px); }
+        .btn-back { background: #64748b; color: white; }
+        .btn-back:hover { background: #475569; }
+        .loading { text-align: center; padding: 60px; }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #e2e8f0;
+            border-top: 3px solid #8b5cf6;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 15px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @media print {
+            body { background: white; padding: 0; }
+            .action-buttons { display: none; }
+            .receipt-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+        @media (max-width: 600px) {
+            .info-grid { grid-template-columns: 1fr; gap: 8px; }
+            .trans-row { flex-direction: column; gap: 5px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="loading">
+            <div class="spinner"></div>
+            <p>Loading receipt...</p>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyBiTikV1L3VCPWNjER6ZUwNIamObn6lwcw",
+            authDomain: "aul-hotel-hub.firebaseapp.com",
+            projectId: "aul-hotel-hub",
+            storageBucket: "aul-hotel-hub.firebasestorage.app",
+            messagingSenderId: "933016423665",
+            appId: "1:933016423665:web:f79960301d2bc5d0fa2d50",
+            databaseURL: "https://aul-hotel-hub-default-rtdb.firebaseio.com/"
+        };
+        
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        
+        function formatMoney(amount) {
+            return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(amount || 0);
+        }
+        
+        function formatDate(ts) {
+            if (!ts) return 'N/A';
+            return new Date(ts).toLocaleDateString('en-NG', { 
+                year: 'numeric', month: 'long', day: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            });
+        }
+        
+        async function loadReceipt() {
+            const urlParams = new URLSearchParams(window.location.search);
+            let receiptId = urlParams.get('id') || urlParams.get('receipt');
+            
+            if (!receiptId) {
+                document.getElementById('app').innerHTML = `
+                    <div style="text-align:center;padding:60px">
+                        <i class="fas fa-receipt" style="font-size:48px;color:#ef4444"></i>
+                        <h2>No Receipt ID</h2>
+                        <button onclick="window.location.href='student.html'" class="btn btn-back" style="margin-top:20px">Back</button>
+                    </div>
+                `;
+                return;
+            }
+            
+            try {
+                const receiptSnap = await db.ref(`receipts/${receiptId}`).once('value');
+                const receipt = receiptSnap.val();
+                
+                if (!receipt) throw new Error('Receipt not found');
+                
+                let studentName = receipt.studentName;
+                let matric = receipt.matric;
+                let email = '';
+                
+                if (receipt.userId) {
+                    const userSnap = await db.ref(`users/${receipt.userId}`).once('value');
+                    const user = userSnap.val();
+                    if (user) {
+                        studentName = `${user.firstName || ''} ${user.middleName || ''} ${user.surname || ''}`.trim();
+                        matric = user.matric;
+                        email = user.email;
+                    }
+                }
+                
+                const verifyUrl = `${window.location.origin}/receipt-verify.html?ref=${receiptId}`;
+                const method = receipt.method || 'Wallet';
+                const badgeClass = method === 'Wallet' ? 'badge-wallet' : 'badge-wallet';
+                
+                const html = `
+                    <div class="receipt-container" id="receiptContainer">
+                        <div class="receipt-header">
+                            <div class="logo-area">
+                                <img src="https://placehold.co/280x65/1e1e3e/ffffff?text=ANCHOR+UNIVERSITY" alt="Logo">
+                            </div>
+                            <h1>OFFICIAL RECEIPT</h1>
+                            <p>Payment Confirmation Voucher</p>
+                            <div class="paid-badge"><i class="fas fa-check-circle"></i> PAID</div>
+                        </div>
+                        
+                        <div class="receipt-body">
+                            <div class="receipt-title">
+                                <h2>PAYMENT RECEIPT</h2>
+                                <p>Reference: ${receipt.reference || receiptId}</p>
+                            </div>
+                            
+                            <div class="info-box">
+                                <h3><i class="fas fa-user-graduate"></i> STUDENT INFORMATION</h3>
+                                <div class="info-grid">
+                                    <div class="info-item"><span class="info-label">Full Name</span><span class="info-value">${studentName || 'N/A'}</span></div>
+                                    <div class="info-item"><span class="info-label">Matric Number</span><span class="info-value">${matric || 'N/A'}</span></div>
+                                    <div class="info-item"><span class="info-label">Email</span><span class="info-value">${email || 'N/A'}</span></div>
+                                    <div class="info-item"><span class="info-label">Date</span><span class="info-value">${formatDate(receipt.date)}</span></div>
+                                </div>
+                            </div>
+                            
+                            <div class="trans-box">
+                                <h3><i class="fas fa-receipt"></i> TRANSACTION DETAILS</h3>
+                                <div class="trans-row"><span class="trans-label">Purpose</span><span class="trans-value">Accommodation Booking</span></div>
+                                <div class="trans-row"><span class="trans-label">Hall of Residence</span><span class="trans-value">${receipt.hallName || 'N/A'}</span></div>
+                                <div class="trans-row"><span class="trans-label">Bed Space Type</span><span class="trans-value">${receipt.bedType || 'N/A'}</span></div>
+                                <div class="trans-row"><span class="trans-label">Payment Method</span><span class="trans-value"><span class="payment-badge ${badgeClass}"><i class="fas fa-wallet"></i> ${method}</span></span></div>
+                                <div class="trans-row"><span class="trans-label">Amount Paid</span><span class="trans-value amount-value">${formatMoney(receipt.amount)}</span></div>
+                                <div class="trans-row"><span class="trans-label">Status</span><span class="trans-value" style="color:#10b981"><i class="fas fa-check-circle"></i> SUCCESSFUL</span></div>
+                            </div>
+                            
+                            <div class="qr-box">
+                                <div class="qr-code" id="qrcode"></div>
+                                <p><i class="fas fa-qrcode"></i> Scan to verify receipt</p>
+                            </div>
+                        </div>
+                        
+                        <div class="footer">
+                            <p><strong>AUL Hostel Hub</strong> - Official Payment Receipt</p>
+                            <p>Receipt ID: ${receiptId}</p>
+                        </div>
+                    </div>
+                `;
+                
+                document.getElementById('app').innerHTML = html;
+                
+                setTimeout(() => {
+                    const qrDiv = document.getElementById('qrcode');
+                    if (qrDiv && typeof QRCode !== 'undefined') {
+                        new QRCode(qrDiv, { text: verifyUrl, width: 120, height: 120 });
+                    }
+                }, 100);
+                
+                const btns = document.createElement('div');
+                btns.className = 'action-buttons';
+                btns.innerHTML = `
+                    <button class="btn btn-download" onclick="downloadReceipt()"><i class="fas fa-download"></i> Download PDF</button>
+                    <button class="btn btn-print" onclick="printReceipt()"><i class="fas fa-print"></i> Print</button>
+                    <button class="btn btn-back" onclick="window.location.href='student.html'"><i class="fas fa-arrow-left"></i> Back</button>
+                `;
+                document.body.appendChild(btns);
+                
+            } catch (err) {
+                document.getElementById('app').innerHTML = `
+                    <div style="text-align:center;padding:60px">
+                        <i class="fas fa-exclamation-triangle" style="font-size:48px;color:#ef4444"></i>
+                        <h2>Error Loading Receipt</h2>
+                        <p>${err.message}</p>
+                        <button onclick="window.location.href='student.html'" class="btn btn-back" style="margin-top:20px">Back</button>
+                    </div>
+                `;
+            }
+        }
+        
+        window.downloadReceipt = function() {
+            const el = document.getElementById('receiptContainer');
+            if (el) html2pdf().set({ margin: 0.5, filename: 'receipt.pdf' }).from(el).save();
+        };
+        
+        window.printReceipt = function() {
+            const el = document.getElementById('receiptContainer');
+            if (el) {
+                const w = window.open('', '_blank');
+                w.document.write('<html><head><title>Receipt</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"><style>body{font-family:sans-serif;padding:20px}</style></head><body>' + el.outerHTML + '</body></html>');
+                w.document.close();
+                w.print();
+            }
+        };
+        
+        // Simple test - also try to load even if auth fails
+        loadReceipt();
+        
+        // Fallback in case Firebase takes too long
+        setTimeout(() => {
+            const app = document.getElementById('app');
+            if (app && app.innerHTML.includes('Loading receipt')) {
+                loadReceipt();
+            }
+        }, 2000);
+    </script>
+</body>
+</html>

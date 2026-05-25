@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AUL Hostel Hub | Authentication</title>
+    
+    <!-- Font Awesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        
+        @keyframes slideDown {
+            from { transform: translateY(-100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .shake { animation: shake 0.3s ease-in-out; }
+        .float-animation { animation: float 3s ease-in-out infinite; }
+        
+        .tab-active {
+            background: linear-gradient(135deg, #8b5cf6, #ec4899);
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+            color: white;
+        }
+        
+        .tab-inactive {
+            background: rgba(255,255,255,0.08);
+            color: rgba(255,255,255,0.6);
+        }
+        
+        .tab-inactive:hover {
+            background: rgba(255,255,255,0.15);
+            color: white;
+        }
+        
+        .glass-card {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 28px;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+        }
+        
+        .input-modern {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 14px;
+            color: white;
+            transition: all 0.2s ease;
+        }
+        
+        .input-modern:focus {
+            border-color: #8b5cf6;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+            background: rgba(255,255,255,0.1);
+        }
+        
+        select.input-modern {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%239ca3af'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 16px;
+        }
+        
+        select.input-modern option {
+            background: #1e293b;
+            color: white;
+            padding: 10px;
+        }
+        
+        .strength-weak { background: linear-gradient(90deg, #ef4444, #f97316); width: 25%; }
+        .strength-good { background: linear-gradient(90deg, #f59e0b, #eab308); width: 60%; }
+        .strength-strong { background: linear-gradient(90deg, #22c55e, #10b981); width: 100%; }
+        
+        .requirement-met { color: #22c55e; }
+        .requirement-unmet { color: #6b7280; }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #8b5cf6, #ec4899);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(139, 92, 246, 0.4);
+        }
+        
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+        
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .toast {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            padding: 14px 24px;
+            border-radius: 16px;
+            color: white;
+            z-index: 10000;
+            animation: slideDown 0.3s ease-out;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 500;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        
+        .fa-spin-custom {
+            animation: spin 0.8s linear infinite;
+        }
+        
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+        
+        /* Loading overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(8px);
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 16px;
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(139, 92, 246, 0.3);
+            border-top: 3px solid #8b5cf6;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        .loading-text {
+            color: white;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body style="background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); min-height: 100vh;">
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Processing...</div>
+    </div>
+    
+    <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; position: relative; overflow: hidden;">
+        <!-- Animated Background Orbs -->
+        <div style="position: absolute; top: 10%; left: 5%; width: 300px; height: 300px; background: #8b5cf6; border-radius: 50%; filter: blur(100px); opacity: 0.15; animation: float 3s ease-in-out infinite;"></div>
+        <div style="position: absolute; bottom: 10%; right: 5%; width: 350px; height: 350px; background: #ec4899; border-radius: 50%; filter: blur(100px); opacity: 0.15; animation: float 4s ease-in-out infinite reverse;"></div>
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 400px; height: 400px; background: #06b6d4; border-radius: 50%; filter: blur(120px); opacity: 0.08;"></div>
+        
+        <div style="width: 100%; max-width: 460px; position: relative; z-index: 10;">
+            <!-- Logo -->
+            <div style="text-align: center; margin-bottom: 32px;" class="float-animation">
+                <div style="width: 75px; height: 75px; margin: 0 auto 16px; background: linear-gradient(135deg, #8b5cf6, #ec4899); border-radius: 22px; display: flex; align-items: center; justify-content: center; box-shadow: 0 15px 30px -10px rgba(0,0,0,0.3);">
+                    <i class="fas fa-building" style="font-size: 35px; color: white;"></i>
+                </div>
+                <h1 style="font-size: 32px; font-weight: 800; background: linear-gradient(135deg, #c4b5fd, #f0abfc); -webkit-background-clip: text; background-clip: text; color: transparent;">AUL Hostel Hub</h1>
+                <p style="color: #9ca3af; font-size: 14px; margin-top: 6px;">Premium University Accommodation Portal</p>
+            </div>
+            
+            <!-- Tabs -->
+            <div style="display: flex; gap: 10px; margin-bottom: 24px; background: rgba(0,0,0,0.25); padding: 6px; border-radius: 40px;">
+                <button id="registerTabBtn" style="flex: 1; padding: 12px; border-radius: 34px; font-weight: 600; border: none; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <i class="fas fa-user-plus"></i> Register
+                </button>
+                <button id="loginTabBtn" style="flex: 1; padding: 12px; border-radius: 34px; font-weight: 600; border: none; cursor: pointer; transition: all 0.3s; background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.6); display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <i class="fas fa-sign-in-alt"></i> Login
+                </button>
+            </div>
+            
+            <!-- REGISTER FORM -->
+            <div id="registerContainer" class="glass-card" style="padding: 28px;">
+                <form id="registerForm">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                        <div>
+                            <label style="font-size: 12px; font-weight: 500; color: #9ca3af; margin-bottom: 6px; display: block;">Surname <span style="color: #f43f5e;">*</span></label>
+                            <input type="text" id="regSurname" placeholder="Adebayo" class="input-modern" style="width: 100%; padding: 12px 14px;">
+                        </div>
+                        <div>
+                            <label style="font-size: 12px; font-weight: 500; color: #9ca3af; margin-bottom: 6px; display: block;">First Name <span style="color: #f43f5e;">*</span></label>
+                            <input type="text" id="regFirstName" placeholder="David" class="input-modern" style="width: 100%; padding: 12px 14px;">
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 14px;">
+                        <label style="font-size: 12px; font-weight: 500; color: #9ca3af; margin-bottom: 6px; display: block;">Middle Name <span style="color: #6b7280;">(Optional)</span></label>
+                        <input type="text" id="regMiddleName" placeholder="Oluwaseun" class="input-modern" style="width: 100%; padding: 12px 14px;">
+                    </div>
+                    
+                    <div style="margin-top: 14px;">
+                        <label style="font-size: 12px; font-weight: 500; color: #9ca3af; margin-bottom: 6px; display: block;">Matric Number <span style="color: #f43f5e;">*</span></label>
+                        <input type="text" id="regMatric" placeholder="AUL/CMP/22/031" maxlength="30" class="input-modern" style="width: 100%; padding: 12px 14px; font-family: monospace; text-transform: uppercase;">
+                        <p style="font-size: 10px; color: #6b7280; margin-top: 6px;"><i class="fas fa-magic"></i> Auto-formats as AUL/XXX/XX/XXX</p>
+                    </div>
+                    
+                    <div style="margin-top: 14px;">
+                        <label style="font-size: 12px; font-weight: 500; color: #9ca3af; margin-bottom: 6px; display: block;">School Email <span style="color: #f43f5e;">*</span></label>
+                        <input type="email" id="regEmail" placeholder="name@student.aul.edu.ng" class="input-modern" style="width: 100%; padding: 12px 14px;">
+                        <p style="font-size: 10px; color: #6b7280; margin-top: 6px;"><i class="fas fa-envelope"></i> Must end with @student.aul.edu.ng</p>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px;">
+                        <div>
+                            <label style="font-size: 12px; font-weight: 500; color: #9ca3af; margin-bottom: 6px; display: block;">Level <span style="color: #f43f5e;">*</span></label>
+                            <select id="regLevel" class="input-modern" style="width: 100%; padding: 12px 14px;">
+                                <option value="" disabled selected>Select Level</option>
+                                <option>100 Level</option>
+                                <option>200 Level</option>
+                                <option>300 Level</option>
+                                <option>400 Level</option>
+                                <option>500 Level+</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-size: 12px; font-weight: 500; color: #9ca3af; margin-bottom: 6px; display: block;">Department <span style="color: #f43f5e;">*</span></label>
+                            <input type="text" id="regDepartment" placeholder="Computer Science" class="input-modern" style="width: 100%; padding: 12px 14px;">
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 14px;">
+                        <label style="font-size: 12px; font-weight: 500; color: #9ca3af; margin-bottom: 6px; display: block;">Password <span style="color: #f43f5e;">*</span></label>
+                        <div style="position: relative;">
+                            <input type="password" id="regPassword" placeholder="Create strong password" class="input-modern" style="width: 100%; padding: 12px 14px; padding-right: 45px;">
+                            <button type="button" id="toggleRegPwd" style="position: absolute; right: 14px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #9ca3af; cursor: pointer; font-size: 18px;">
+                                <i class="fas fa-eye-slash"></i>
+                            </button>
+                        </div>
+                        <div style="margin-top: 10px;">
+                            <div style="height: 5px; background: #1e293b; border-radius: 5px; overflow: hidden;">
+                                <div id="strengthBar" style="height: 100%; width: 0%; transition: all 0.3s;"></div>
+                            </div>
+                            <p style="font-size: 11px; margin-top: 6px; color: #9ca3af;">Strength: <span id="strengthLabel">Not entered</span></p>
+                        </div>
+                        <div style="margin-top: 10px; font-size: 11px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                            <p id="reqLength" class="requirement-unmet"><i class="fas fa-circle" style="font-size: 5px; vertical-align: middle; margin-right: 6px;"></i> 8+ characters</p>
+                            <p id="reqUpper" class="requirement-unmet"><i class="fas fa-circle" style="font-size: 5px; vertical-align: middle; margin-right: 6px;"></i> Uppercase letter</p>
+                            <p id="reqLower" class="requirement-unmet"><i class="fas fa-circle" style="font-size: 5px; vertical-align: middle; margin-right: 6px;"></i> Lowercase letter</p>
+                            <p id="reqNumber" class="requirement-unmet"><i class="fas fa-circle" style="font-size: 5px; vertical-align: middle; margin-right: 6px;"></i> Number</p>
+                            <p id="reqSymbol" class="requirement-unmet" style="grid-column: span 2;"><i class="fas fa-circle" style="font-size: 5px; vertical-align: middle; margin-right: 6px;"></i> Symbol (!@#$%^&*)</p>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 14px;">
+                        <label style="font-size: 12px; font-weight: 500; color: #9ca3af; margin-bottom: 6px; display: block;">Confirm Password <span style="color: #f43f5e;">*</span></label>
+                        <div style="position: relative;">
+                            <input type="password" id="regConfirmPassword" placeholder="Confirm your password" class="input-modern" style="width: 100%; padding: 12px 14px; padding-right: 45px;">
+                            <button type="button" id="toggleConfirmPwd" style="position: absolute; right: 14px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #9ca3af; cursor: pointer; font-size: 18px;">
+                                <i class="fas fa-eye-slash"></i>
+                            </button>
+                        </div>
+                        <p id="confirmMatchMsg" style="font-size: 11px; margin-top: 6px; color: #9ca3af;"><i class="fas fa-spinner fa-pulse"></i> Waiting for confirmation</p>
+                    </div>
+                    
+                    <button type="submit" id="registerSubmitBtn" class="btn-primary" style="width: 100%; margin-top: 24px; padding: 14px; border: none; border-radius: 16px; color: white; font-weight: 700; font-size: 15px;">
+                        <i class="fas fa-user-plus" style="margin-right: 8px;"></i> Create Account
+                    </button>
+                </form>
+                <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.08); text-align: center;">
+                    <p style="font-size: 13px; color: #9ca3af;">Already have an account? <a href="#" id="switchToLogin" style="color: #c4b5fd; text-decoration: none; font-weight: 500;">Sign in here <i class="fas fa-arrow-right"></i></a></p>
+                </div>
+            </div>
+            
+            <!-- LOGIN FORM -->
+            <div id="loginContainer" class="glass-card" style="padding: 32px; display: none;">
+                <form id="loginForm">
+                    <div>
+                        <label style="font-size: 12px; font-weight: 500; color: #9ca3af; margin-bottom: 6px; display: block;">Matric Number</label>
+                        <input type="text" id="loginMatric" placeholder="AUL/CMP/22/031" maxlength="30" class="input-modern" style="width: 100%; padding: 14px; font-family: monospace; text-transform: uppercase;">
+                    </div>
+                    
+                    <div style="margin-top: 20px;">
+                        <label style="font-size: 12px; font-weight: 500; color: #9ca3af; margin-bottom: 6px; display: block;">Password</label>
+                        <div style="position: relative;">
+                            <input type="password" id="loginPassword" placeholder="Enter your password" class="input-modern" style="width: 100%; padding: 14px; padding-right: 45px;">
+                            <button type="button" id="toggleLoginPwd" style="position: absolute; right: 14px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #9ca3af; cursor: pointer; font-size: 18px;">
+                                <i class="fas fa-eye-slash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div style="text-align: right; margin-top: 10px;">
+                        <a href="#" id="forgotPwdLink" style="font-size: 12px; color: #c4b5fd; text-decoration: none;">Forgot Password? <i class="fas fa-question-circle"></i></a>
+                    </div>
+                    
+                    <button type="submit" id="loginSubmitBtn" class="btn-primary" style="width: 100%; margin-top: 28px; padding: 14px; border: none; border-radius: 16px; color: white; font-weight: 700; font-size: 15px;">
+                        <i class="fas fa-sign-in-alt" style="margin-right: 8px;"></i> Sign In
+                    </button>
+                </form>
+                <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.08); text-align: center;">
+                    <p style="font-size: 13px; color: #9ca3af;">Don't have an account? <a href="#" id="switchToRegister" style="color: #c4b5fd; text-decoration: none; font-weight: 500;"><i class="fas fa-arrow-left"></i> Create one here</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Forgot Password Modal -->
+    <div id="forgotModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(12px); z-index: 1000; display: none; align-items: center; justify-content: center;">
+        <div style="background: rgba(15,23,42,0.98); border-radius: 28px; padding: 28px; width: 90%; max-width: 420px; border: 1px solid rgba(255,255,255,0.1);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="font-size: 22px; font-weight: bold; background: linear-gradient(135deg, #c4b5fd, #f0abfc); -webkit-background-clip: text; background-clip: text; color: transparent;">
+                    <i class="fas fa-key"></i> Reset Password
+                </h3>
+                <button id="closeModalBtn" style="background: none; border: none; color: #9ca3af; font-size: 28px; cursor: pointer; transition: 0.2s;">&times;</button>
+            </div>
+            <p style="color: #9ca3af; font-size: 14px; margin-bottom: 20px;">Enter your school email and we'll send you a password reset link.</p>
+            <input type="email" id="resetEmailInput" placeholder="name@student.aul.edu.ng" class="input-modern" style="width: 100%; padding: 14px; margin-bottom: 20px;">
+            <button id="sendResetBtn" class="btn-primary" style="width: 100%; padding: 14px; border: none; border-radius: 16px; color: white; font-weight: 600; cursor: pointer;">
+                <i class="fas fa-paper-plane"></i> Send Reset Email
+            </button>
+            <div id="resetMessage" style="margin-top: 16px; font-size: 12px; text-align: center; color: #9ca3af; display: none;">
+                <i class="fas fa-info-circle"></i> Check your spam folder if you don't see the email
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // FIREBASE CONFIGURATION (EMBEDDED DIRECTLY)
+        // ============================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyBiTikV1L3VCPWNjER6ZUwNIamObn6lwcw",
+            authDomain: "aul-hotel-hub.firebaseapp.com",
+            projectId: "aul-hotel-hub",
+            storageBucket: "aul-hotel-hub.firebasestorage.app",
+            messagingSenderId: "933016423665",
+            appId: "1:933016423665:web:f79960301d2bc5d0fa2d50",
+            databaseURL: "https://aul-hotel-hub-default-rtdb.firebaseio.com/"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.database();
+        
+        const SUPER_ADMIN_EMAIL = "jesseegwuatu@gmail.com";
+        
+        // ============================================
+        // HELPER FUNCTIONS
+        // ============================================
+        function showLoading(show, message = 'Processing...') {
+            const overlay = document.getElementById('loadingOverlay');
+            const textEl = overlay?.querySelector('.loading-text');
+            if (overlay) {
+                if (show) {
+                    if (textEl) textEl.textContent = message;
+                    overlay.style.display = 'flex';
+                } else {
+                    overlay.style.display = 'none';
+                }
+            }
+        }
+        
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.style.background = type === 'success' ? 'linear-gradient(135deg, #22c55e, #16a34a)' : 'linear-gradient(135deg, #ef4444, #dc2626)';
+            toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i> ${message}`;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.style.animation = 'slideDown reverse 0.3s ease-out';
+                setTimeout(() => toast.remove(), 300);
+            }, 5000);
+        }
+        
+        function triggerConfetti() {
+            if (typeof canvasConfetti !== 'undefined') {
+                canvasConfetti({
+                    particleCount: 200,
+                    spread: 100,
+                    origin: { y: 0.6 },
+                    colors: ['#8b5cf6', '#ec4899', '#f0abfc', '#c4b5fd']
+                });
+            }
+        }
+        
+        // ============================================
+        // MATRIC FORMATTING: AUL/XXX/XX/XXX
+        // ============================================
+        function formatMatricNumber(input) {
+            let value = input.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            let formatted = '';
+            let position = 0;
+            
+            for (let i = 0; i < value.length; i++) {
+                if (position === 3 || position === 6 || position === 8) {
+                    formatted += '/';
+                }
+                formatted += value[i];
+                position++;
+            }
+            
+            if (formatted.length > 35) formatted = formatted.substring(0, 35);
+            input.value = formatted;
+        }
+        
+        // ============================================
+        // PASSWORD STRENGTH CHECKER
+        // ============================================
+        const regPassword = document.getElementById('regPassword');
+        const strengthBar = document.getElementById('strengthBar');
+        const strengthLabel = document.getElementById('strengthLabel');
+        
+        function checkStrength() {
+            const pwd = regPassword?.value || '';
+            const checks = {
+                length: pwd.length >= 8,
+                upper: /[A-Z]/.test(pwd),
+                lower: /[a-z]/.test(pwd),
+                number: /[0-9]/.test(pwd),
+                symbol: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pwd)
+            };
+            
+            const elements = {
+                reqLength: document.getElementById('reqLength'),
+                reqUpper: document.getElementById('reqUpper'),
+                reqLower: document.getElementById('reqLower'),
+                reqNumber: document.getElementById('reqNumber'),
+                reqSymbol: document.getElementById('reqSymbol')
+            };
+            
+            Object.keys(checks).forEach(key => {
+                const elKey = `req${key.charAt(0).toUpperCase() + key.slice(1)}`;
+                if (elements[elKey]) {
+                    elements[elKey].className = checks[key] ? 'requirement-met' : 'requirement-unmet';
+                }
+            });
+            
+            const metCount = Object.values(checks).filter(Boolean).length;
+            
+            if (pwd.length === 0) {
+                if (strengthBar) strengthBar.style.width = '0%';
+                if (strengthLabel) strengthLabel.textContent = 'Not entered';
+                return false;
+            }
+            
+            if (metCount <= 2) {
+                if (strengthBar) {
+                    strengthBar.style.width = '25%';
+                    strengthBar.className = 'strength-weak';
+                }
+                if (strengthLabel) strengthLabel.innerHTML = '<span style="color: #ef4444;">Weak</span>';
+            } else if (metCount <= 4) {
+                if (strengthBar) {
+                    strengthBar.style.width = '60%';
+                    strengthBar.className = 'strength-good';
+                }
+                if (strengthLabel) strengthLabel.innerHTML = '<span style="color: #eab308;">Good</span>';
+            } else {
+                if (strengthBar) {
+                    strengthBar.style.width = '100%';
+                    strengthBar.className = 'strength-strong';
+                }
+                if (strengthLabel) strengthLabel.innerHTML = '<span style="color: #22c55e;">Strong</span>';
+            }
+            
+            return metCount === 5;
+        }
+        
+        // ============================================
+        // CONFIRM PASSWORD MATCH
+        // ============================================
+        function checkConfirm() {
+            const pwd = regPassword?.value || '';
+            const confirm = document.getElementById('regConfirmPassword')?.value || '';
+            const msgEl = document.getElementById('confirmMatchMsg');
+            
+            if (!msgEl) return false;
+            
+            if (confirm.length === 0) {
+                msgEl.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Waiting for confirmation';
+                msgEl.style.color = '#9ca3af';
+                return false;
+            }
+            
+            if (pwd === confirm) {
+                msgEl.innerHTML = '<i class="fas fa-check-circle" style="color: #22c55e;"></i> Passwords match';
+                msgEl.style.color = '#22c55e';
+                return true;
+            } else {
+                msgEl.innerHTML = '<i class="fas fa-times-circle" style="color: #ef4444;"></i> Passwords do not match';
+                msgEl.style.color = '#ef4444';
+                return false;
+            }
+        }
+        
+        // ============================================
+        // DOM ELEMENTS & EVENT LISTENERS
+        // ============================================
+        const regMatric = document.getElementById('regMatric');
+        const loginMatric = document.getElementById('loginMatric');
+        
+        if (regMatric) regMatric.addEventListener('input', function() { formatMatricNumber(this); });
+        if (loginMatric) loginMatric.addEventListener('input', function() { formatMatricNumber(this); });
+        
+        if (regPassword) {
+            regPassword.addEventListener('input', () => {
+                checkStrength();
+                checkConfirm();
+            });
+        }
+        
+        const regConfirm = document.getElementById('regConfirmPassword');
+        if (regConfirm) regConfirm.addEventListener('input', checkConfirm);
+        
+        // Password toggle buttons (using Font Awesome icons)
+        function setupToggle(toggleId, inputId) {
+            const toggle = document.getElementById(toggleId);
+            const input = document.getElementById(inputId);
+            if (toggle && input) {
+                toggle.addEventListener('click', () => {
+                    const isPassword = input.type === 'password';
+                    input.type = isPassword ? 'text' : 'password';
+                    const icon = toggle.querySelector('i');
+                    if (icon) {
+                        icon.className = isPassword ? 'fas fa-eye' : 'fas fa-eye-slash';
+                    }
+                });
+            }
+        }
+        
+        setupToggle('toggleRegPwd', 'regPassword');
+        setupToggle('toggleConfirmPwd', 'regConfirmPassword');
+        setupToggle('toggleLoginPwd', 'loginPassword');
+        
+        // Tab switching
+        const registerContainer = document.getElementById('registerContainer');
+        const loginContainer = document.getElementById('loginContainer');
+        const registerTab = document.getElementById('registerTabBtn');
+        const loginTab = document.getElementById('loginTabBtn');
+        
+        function showRegister() {
+            registerContainer.style.display = 'block';
+            loginContainer.style.display = 'none';
+            registerTab.className = 'tab-active';
+            loginTab.className = 'tab-inactive';
+        }
+        
+        function showLogin() {
+            registerContainer.style.display = 'none';
+            loginContainer.style.display = 'block';
+            loginTab.className = 'tab-active';
+            registerTab.className = 'tab-inactive';
+        }
+        
+        registerTab.onclick = showRegister;
+        loginTab.onclick = showLogin;
+        
+        const switchToLoginLink = document.getElementById('switchToLogin');
+        const switchToRegisterLink = document.getElementById('switchToRegister');
+        
+        if (switchToLoginLink) switchToLoginLink.addEventListener('click', (e) => { e.preventDefault(); showLogin(); });
+        if (switchToRegisterLink) switchToRegisterLink.addEventListener('click', (e) => { e.preventDefault(); showRegister(); });
+        
+        // ============================================
+        // FORGOT PASSWORD MODAL - FIXED
+        // ============================================
+        const modal = document.getElementById('forgotModal');
+        const forgotLink = document.getElementById('forgotPwdLink');
+        const closeModal = document.getElementById('closeModalBtn');
+        const sendReset = document.getElementById('sendResetBtn');
+        const resetEmail = document.getElementById('resetEmailInput');
+        const resetMessage = document.getElementById('resetMessage');
+        
+        if (forgotLink) {
+            forgotLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (modal) {
+                    if (resetMessage) resetMessage.style.display = 'none';
+                    modal.style.display = 'flex';
+                }
+            });
+        }
+        
+        if (closeModal) {
+            closeModal.addEventListener('click', () => {
+                if (modal) modal.style.display = 'none';
+                if (resetEmail) resetEmail.value = '';
+            });
+        }
+        
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.style.display = 'none';
+                    if (resetEmail) resetEmail.value = '';
+                }
+            });
+        }
+        
+        if (sendReset) {
+            sendReset.addEventListener('click', async () => {
+                const email = resetEmail?.value.trim();
+                
+                if (!email) {
+                    showToast('Please enter your email address', 'error');
+                    return;
+                }
+                
+                if (!email.endsWith('@student.aul.edu.ng')) {
+                    showToast('Email must end with @student.aul.edu.ng', 'error');
+                    return;
+                }
+                
+                showLoading(true, 'Sending reset email...');
+                
+                try {
+                    // Configure action URL (optional - Firebase Console has default)
+                    const actionCodeSettings = {
+                        url: window.location.href,
+                        handleCodeInApp: false
+                    };
+                    
+                    await auth.sendPasswordResetEmail(email, actionCodeSettings);
+                    
+                    showLoading(false);
+                    showToast('✅ Password reset email sent! Check your inbox (and spam folder).', 'success');
+                    
+                    if (resetMessage) resetMessage.style.display = 'block';
+                    
+                    // Close modal after 3 seconds
+                    setTimeout(() => {
+                        if (modal) modal.style.display = 'none';
+                        if (resetEmail) resetEmail.value = '';
+                        if (resetMessage) resetMessage.style.display = 'none';
+                    }, 3000);
+                    
+                } catch (err) {
+                    showLoading(false);
+                    console.error('Password reset error:', err);
+                    
+                    // Provide more specific error messages
+                    if (err.code === 'auth/user-not-found') {
+                        showToast('No account found with this email address', 'error');
+                    } else if (err.code === 'auth/invalid-email') {
+                        showToast('Please enter a valid email address', 'error');
+                    } else if (err.code === 'auth/too-many-requests') {
+                        showToast('Too many requests. Please try again later.', 'error');
+                    } else {
+                        showToast(err.message || 'Failed to send reset email. Please try again.', 'error');
+                    }
+                }
+            });
+        }
+        
+        // Enter key in reset email input
+        if (resetEmail) {
+            resetEmail.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && sendReset) {
+                    sendReset.click();
+                }
+            });
+        }
+        
+        // ============================================
+        // REGISTER FUNCTION
+        // ============================================
+        const registerForm = document.getElementById('registerForm');
+        const registerBtn = document.getElementById('registerSubmitBtn');
+        
+        if (registerForm) {
+            registerForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const surname = document.getElementById('regSurname')?.value.trim();
+                const firstName = document.getElementById('regFirstName')?.value.trim();
+                const middleName = document.getElementById('regMiddleName')?.value.trim();
+                const matric = document.getElementById('regMatric')?.value.trim().toUpperCase();
+                const email = document.getElementById('regEmail')?.value.trim().toLowerCase();
+                const level = document.getElementById('regLevel')?.value;
+                const department = document.getElementById('regDepartment')?.value.trim();
+                const password = regPassword?.value;
+                const confirm = regConfirm?.value;
+                
+                if (!surname || !firstName || !matric || !email || !level || !department || !password) {
+                    showToast('Please fill all required fields', 'error');
+                    return;
+                }
+                
+                if (!email.endsWith('@student.aul.edu.ng')) {
+                    showToast('Email must end with @student.aul.edu.ng', 'error');
+                    return;
+                }
+                
+                if (!checkStrength()) {
+                    showToast('Please meet all password requirements', 'error');
+                    return;
+                }
+                
+                if (password !== confirm) {
+                    showToast('Passwords do not match', 'error');
+                    return;
+                }
+                
+                showLoading(true, 'Creating your account...');
+                
+                if (registerBtn) {
+                    registerBtn.disabled = true;
+                    registerBtn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Creating account...';
+                }
+                
+                try {
+                    // Check if matric exists
+                    const matricCheck = await db.ref('users').orderByChild('matric').equalTo(matric).once('value');
+                    if (matricCheck.exists()) {
+                        showToast('Matric number already registered', 'error');
+                        showLoading(false);
+                        if (registerBtn) {
+                            registerBtn.disabled = false;
+                            registerBtn.innerHTML = '<i class="fas fa-user-plus"></i> Create Account';
+                        }
+                        return;
+                    }
+                    
+                    // Check if email exists
+                    const emailCheck = await db.ref('users').orderByChild('email').equalTo(email).once('value');
+                    if (emailCheck.exists()) {
+                        showToast('Email already registered', 'error');
+                        showLoading(false);
+                        if (registerBtn) {
+                            registerBtn.disabled = false;
+                            registerBtn.innerHTML = '<i class="fas fa-user-plus"></i> Create Account';
+                        }
+                        return;
+                    }
+                    
+                    // Create user
+                    const userCred = await auth.createUserWithEmailAndPassword(email, password);
+                    const user = userCred.user;
+                    
+                    let role = 'student';
+                    if (email === SUPER_ADMIN_EMAIL) role = 'super_admin';
+                    
+                    const userData = {
+                        uid: user.uid,
+                        surname, firstName, middleName: middleName || '',
+                        matric, email, level, department,
+                        role, walletBalance: 0, createdAt: Date.now(), isActive: true
+                    };
+                    
+                    await db.ref(`users/${user.uid}`).set(userData);
+                    
+                    await db.ref(`notifications/${user.uid}`).push({
+                        message: `🎉 Welcome to AUL Hostel Hub, ${firstName}!`,
+                        timestamp: Date.now(), icon: 'fa-graduation-cap', color: 'purple', read: false
+                    });
+                    
+                    showLoading(false);
+                    showToast('Registration successful! Redirecting...', 'success');
+                    triggerConfetti();
+                    
+                    // Redirect based on role
+                    setTimeout(() => {
+                        if (role === 'super_admin' || role === 'admin') {
+                            window.location.href = 'admin.html';
+                        } else {
+                            window.location.href = 'student.html';
+                        }
+                    }, 1500);
+                    
+                } catch (err) {
+                    showLoading(false);
+                    showToast(err.message, 'error');
+                    if (registerBtn) {
+                        registerBtn.disabled = false;
+                        registerBtn.innerHTML = '<i class="fas fa-user-plus"></i> Create Account';
+                    }
+                }
+            });
+        }
+        
+        // ============================================
+        // LOGIN FUNCTION
+        // ============================================
+        const loginForm = document.getElementById('loginForm');
+        const loginBtn = document.getElementById('loginSubmitBtn');
+        
+        if (loginForm) {
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const matric = document.getElementById('loginMatric')?.value.trim().toUpperCase();
+                const password = document.getElementById('loginPassword')?.value;
+                
+                if (!matric || !password) {
+                    showToast('Please enter matric number and password', 'error');
+                    return;
+                }
+                
+                showLoading(true, 'Signing in...');
+                
+                if (loginBtn) {
+                    loginBtn.disabled = true;
+                    loginBtn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Signing in...';
+                }
+                
+                try {
+                    const usersRef = db.ref('users');
+                    const snapshot = await usersRef.orderByChild('matric').equalTo(matric).once('value');
+                    
+                    if (!snapshot.exists()) {
+                        showToast('Invalid credentials', 'error');
+                        showLoading(false);
+                        if (loginBtn) {
+                            loginBtn.disabled = false;
+                            loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In';
+                        }
+                        return;
+                    }
+                    
+                    const userId = Object.keys(snapshot.val())[0];
+                    const userData = snapshot.val()[userId];
+                    const email = userData.email;
+                    
+                    await auth.signInWithEmailAndPassword(email, password);
+                    showToast('Login successful! Redirecting...', 'success');
+                    
+                    // Redirect based on role
+                    setTimeout(() => {
+                        if (userData.role === 'super_admin' || userData.role === 'admin') {
+                            window.location.href = 'admin.html';
+                        } else {
+                            window.location.href = 'student.html';
+                        }
+                    }, 1000);
+                    
+                } catch (err) {
+                    showLoading(false);
+                    showToast(err.message, 'error');
+                    if (loginBtn) {
+                        loginBtn.disabled = false;
+                        loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In';
+                    }
+                }
+            });
+        }
+        
+        // Set default to Register tab
+        showRegister();
+    </script>
+</body>
+</html>

@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>AUL Hostel Hub | Premium Accommodation Portal</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1"></script>
+    
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+    
+    <!-- Flutterwave -->
+    <script src="https://checkout.flutterwave.com/v3.js"></script>
+    
+    <!-- Cloudinary -->
+    <script src="https://upload-widget.cloudinary.com/global/all.js"></script>
+    
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        
+        /* Glassmorphism */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(12px);
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .glass-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(102, 126, 234, 0.5);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Gradient Background */
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.4s ease-out;
+        }
+        
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 14px 24px;
+            border-radius: 16px;
+            color: white;
+            z-index: 10000;
+            animation: slideInRight 0.3s ease-out;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 500;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(12px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.2s ease-out;
+        }
+        
+        /* Spinner */
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(102, 126, 234, 0.3);
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Skeleton Loader */
+        .skeleton {
+            background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+            background-size: 200% 100%;
+            animation: skeletonLoading 1.5s infinite;
+            border-radius: 12px;
+        }
+        
+        @keyframes skeletonLoading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #1e293b; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 10px; }
+        
+        /* Theme Variables */
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --border: #334155;
+        }
+        
+        [data-theme="light"] {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #f1f5f9;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --card-bg: rgba(255, 255, 255, 0.7);
+            --border: #e2e8f0;
+        }
+        
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+        
+        /* Pulse Animation */
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(102, 126, 234, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(102, 126, 234, 0); }
+        }
+        
+        /* Typing Animation */
+        .typing {
+            overflow: hidden;
+            border-right: 2px solid #667eea;
+            white-space: nowrap;
+            animation: typing 3s steps(40, end), blink-caret 0.75s step-end infinite;
+        }
+        
+        @keyframes typing {
+            from { width: 0; }
+            to { width: 100%; }
+        }
+        
+        @keyframes blink-caret {
+            from, to { border-color: transparent; }
+            50% { border-color: #667eea; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Main App Container -->
+    <div id="app" class="min-h-screen">
+        <div class="flex items-center justify-center min-h-screen">
+            <div class="spinner"></div>
+        </div>
+    </div>
+    
+    <!-- Hidden Audio Elements -->
+    <audio id="sound-success" preload="auto">
+        <source src="https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="sound-error" preload="auto">
+        <source src="https://www.soundjay.com/misc/sounds/error-01.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="sound-click" preload="auto">
+        <source src="https://www.soundjay.com/button/beep-07.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="sound-notification" preload="auto">
+        <source src="https://www.soundjay.com/misc/sounds/notification-02.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="sound-booking" preload="auto">
+        <source src="https://www.soundjay.com/misc/sounds/cash-register-01.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="sound-cha-ching" preload="auto">
+        <source src="https://www.soundjay.com/misc/sounds/cash-register-02.mp3" type="audio/mpeg">
+    </audio>
+    
+    <!-- Confetti Canvas -->
+    <canvas id="confetti-canvas" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10001;"></canvas>
+    
+    <script>
+        // ============================================
+        // FIREBASE CONFIGURATION
+        // ============================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyBiTikV1L3VCPWNjER6ZUwNIamObn6lwcw",
+            authDomain: "aul-hotel-hub.firebaseapp.com",
+            projectId: "aul-hotel-hub",
+            storageBucket: "aul-hotel-hub.firebasestorage.app",
+            messagingSenderId: "933016423665",
+            appId: "1:933016423665:web:f79960301d2bc5d0fa2d50",
+            databaseURL: "https://aul-hotel-hub-default-rtdb.firebaseio.com/"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.database();
+        const storage = firebase.storage();
+        
+        // Cloudinary Config
+        const CLOUDINARY_CLOUD_NAME = "dsyr5ejvh";
+        const CLOUDINARY_UPLOAD_PRESET = "aulhostelhub";
+        
+        // Flutterwave Config
+        const FLUTTERWAVE_PUBLIC_KEY = "pk_live_b226b448a00252b0789a322f6448d710037c02c1";
+        const FLUTTERWAVE_ENCRYPTION_KEY = "c7683bf2d8ce7c1a0f225153";
+        const FLUTTERWAVE_SECRET_KEY = "sk_live_279cb2fdb7c87455527ff4faaa661185242ef7d8";
+        
+        // Super Admin Email
+        const SUPER_ADMIN_EMAIL = "jesseegwuatu@gmail.com";
+        
+        // ============================================
+        // GLOBAL STATE
+        // ============================================
+        let currentUser = null;
+        let currentUserData = null;
+        let currentView = 'landing';
+        let realtimeListeners = [];
+        let portalStatus = { isOpen: true, message: "Portal Open for Bookings" };
+        let allHalls = {};
+        let viewCache = {};
+        
+        // ============================================
+        // HELPER FUNCTIONS
+        // ============================================
+        function playSound(soundId) {
+            try {
+                const sound = document.getElementById(soundId);
+                if (sound) {
+                    sound.currentTime = 0;
+                    sound.play().catch(e => console.log("Audio play failed:", e));
+                }
+            } catch(e) { console.log(e); }
+        }
+        
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type === 'success' ? 'bg-gradient-to-r from-green-500 to-emerald-600' : type === 'error' ? 'bg-gradient-to-r from-red-500 to-rose-600' : type === 'warning' ? 'bg-gradient-to-r from-yellow-500 to-orange-600' : 'bg-gradient-to-r from-blue-500 to-indigo-600'}`;
+            toast.innerHTML = `
+                <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle'} text-white text-xl"></i>
+                <span>${message}</span>
+            `;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.style.animation = 'slideInRight reverse 0.3s ease-out';
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+            if (type === 'success') playSound('sound-success');
+            else if (type === 'error') playSound('sound-error');
+        }
+        
+        function triggerConfetti() {
+            canvasConfetti({
+                particleCount: 200,
+                spread: 100,
+                origin: { y: 0.6 },
+                colors: ['#667eea', '#764ba2', '#f093fb', '#4facfe', '#43e97b', '#fa709a']
+            });
+            playSound('sound-booking');
+        }
+        
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(amount || 0);
+        }
+        
+        function formatDate(timestamp) {
+            if (!timestamp) return 'N/A';
+            return new Date(timestamp).toLocaleDateString('en-NG', { 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+        
+        function generateTransactionRef() {
+            return 'AUL-' + Date.now() + '-' + Math.random().toString(36).substr(2, 8).toUpperCase();
+        }
+        
+        function showModal(content, options = {}) {
+            const existingModal = document.querySelector('.modal-overlay');
+            if (existingModal) existingModal.remove();
+            
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.innerHTML = `
+                <div class="relative w-full max-w-md mx-4 animate-[fadeIn_0.3s_ease-out]">
+                    ${options.showClose !== false ? `<button onclick="this.closest('.modal-overlay').remove()" class="absolute -top-12 right-0 text-white text-2xl hover:text-gray-300 transition">✕</button>` : ''}
+                    ${content}
+                </div>
+            `;
+            
+            if (options.closeOnOutsideClick !== false) {
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) modal.remove();
+                });
+            }
+            
+            document.body.appendChild(modal);
+            return modal;
+        }
+        
+        function showInsufficientBalanceModal() {
+            const content = `
+                <div class="glass-card p-8 text-center">
+                    <div class="w-20 h-20 mx-auto mb-4 bg-red-500/20 rounded-full flex items-center justify-center">
+                        <i class="fas fa-wallet text-red-500 text-4xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-white mb-2">Insufficient Balance!</h3>
+                    <p class="text-gray-300 mb-6">Your wallet balance is too low. Please fund your wallet to continue with this booking.</p>
+                    <div class="flex gap-3">
+                        <button onclick="this.closest('.modal-overlay').remove(); window.loadView('wallet')" class="flex-1 gradient-bg text-white py-3 rounded-xl font-semibold hover:opacity-90 transition">
+                            <i class="fas fa-plus-circle mr-2"></i>Fund Wallet
+                        </button>
+                        <button onclick="this.closest('.modal-overlay').remove()" class="flex-1 bg-gray-700 text-white py-3 rounded-xl font-semibold hover:bg-gray-600 transition">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            `;
+            showModal(content);
+        }
+        
+        // ============================================
+        // VIEW LOADING SYSTEM (NO PAGE REFRESH)
+        // ============================================
+        async function loadView(view, params = {}) {
+            currentView = view;
+            window.history.pushState({ view, params }, '', `#${view}`);
+            
+            const app = document.getElementById('app');
+            if (!app) return;
+            
+            // Show loading skeleton
+            app.innerHTML = `
+                <div class="min-h-screen flex items-center justify-center">
+                    <div class="text-center">
+                        <div class="spinner mx-auto mb-4"></div>
+                        <p class="text-gray-400">Loading ${view}...</p>
+                    </div>
+                </div>
+            `;
+            
+            // Check cache first
+            if (viewCache[view]) {
+                app.innerHTML = viewCache[view];
+                if (typeof window[`on${view}Loaded`] === 'function') {
+                    await window[`on${view}Loaded`](params);
+                }
+                playSound('sound-click');
+                return;
+            }
+            
+            // Fetch the view HTML file
+            try {
+                const response = await fetch(`${view}.html`);
+                if (!response.ok) throw new Error(`Failed to load ${view}.html`);
+                let html = await response.text();
+                
+                // Replace placeholders with params
+                if (params) {
+                    Object.keys(params).forEach(key => {
+                        html = html.replace(new RegExp(`{{${key}}}`, 'g'), params[key]);
+                    });
+                }
+                
+                viewCache[view] = html;
+                app.innerHTML = html;
+                
+                // Call the view's onLoad function if it exists
+                if (typeof window[`on${view}Loaded`] === 'function') {
+                    await window[`on${view}Loaded`](params);
+                }
+                
+                playSound('sound-click');
+            } catch (error) {
+                console.error('Error loading view:', error);
+                app.innerHTML = `
+                    <div class="min-h-screen flex items-center justify-center">
+                        <div class="glass-card p-8 text-center max-w-md">
+                            <i class="fas fa-exclamation-triangle text-5xl text-red-500 mb-4"></i>
+                            <h2 class="text-2xl font-bold mb-2">Failed to Load Page</h2>
+                            <p class="text-gray-400 mb-4">${error.message}</p>
+                            <button onclick="window.location.reload()" class="gradient-bg px-6 py-2 rounded-lg">Retry</button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        // Navigation wrapper
+        function navigateTo(view, params = {}) {
+            loadView(view, params);
+        }
+        
+        // ============================================
+        // AUTH STATE LISTENER
+        // ============================================
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                currentUser = user;
+                // Fetch user data from database
+                const userSnapshot = await db.ref(`users/${user.uid}`).once('value');
+                currentUserData = userSnapshot.val();
+                
+                // If no user data exists (shouldn't happen), create it
+                if (!currentUserData) {
+                    currentUserData = { email: user.email, role: 'student', walletBalance: 0 };
+                    await db.ref(`users/${user.uid}`).set(currentUserData);
+                }
+                
+                // Check if super admin
+                if (currentUser.email === SUPER_ADMIN_EMAIL && currentUserData.role !== 'super_admin') {
+                    await db.ref(`users/${user.uid}/role`).set('super_admin');
+                    currentUserData.role = 'super_admin';
+                }
+                
+                // Setup global realtime listeners
+                setupGlobalListeners();
+                
+                // Redirect based on role
+                if (currentUserData.role === 'admin' || currentUserData.role === 'super_admin') {
+                    loadView('admin');
+                } else {
+                    loadView('student');
+                }
+            } else {
+                currentUser = null;
+                currentUserData = null;
+                clearGlobalListeners();
+                loadView('auth');
+            }
+        });
+        
+        // ============================================
+        // GLOBAL REALTIME LISTENERS
+        // ============================================
+        function setupGlobalListeners() {
+            if (!currentUser) return;
+            
+            // Portal status listener
+            const portalRef = db.ref('portalStatus');
+            portalRef.on('value', (snapshot) => {
+                portalStatus = snapshot.val() || { isOpen: true, message: "Portal Open" };
+                updatePortalStatusUI();
+            });
+            realtimeListeners.push({ ref: portalRef, event: 'value' });
+            
+            // User wallet balance listener
+            const walletRef = db.ref(`users/${currentUser.uid}/walletBalance`);
+            walletRef.on('value', (snapshot) => {
+                if (currentUserData) {
+                    currentUserData.walletBalance = snapshot.val() || 0;
+                    updateWalletUI();
+                }
+            });
+            realtimeListeners.push({ ref: walletRef, event: 'value' });
+            
+            // User notifications listener
+            const notifRef = db.ref(`notifications/${currentUser.uid}`).limitToLast(10);
+            notifRef.on('value', (snapshot) => {
+                const notifications = [];
+                snapshot.forEach((child) => {
+                    notifications.push({ id: child.key, ...child.val() });
+                });
+                updateNotificationsUI(notifications);
+            });
+            realtimeListeners.push({ ref: notifRef, event: 'value' });
+            
+            // Halls listener (for room availability)
+            const hallsRef = db.ref('halls');
+            hallsRef.on('value', (snapshot) => {
+                allHalls = snapshot.val() || {};
+                updateHallsUI();
+            });
+            realtimeListeners.push({ ref: hallsRef, event: 'value' });
+        }
+        
+        function clearGlobalListeners() {
+            realtimeListeners.forEach(listener => {
+                listener.ref.off(listener.event);
+            });
+            realtimeListeners = [];
+        }
+        
+        function updatePortalStatusUI() {
+            const badge = document.getElementById('portal-status-badge');
+            if (badge) {
+                badge.innerHTML = portalStatus.isOpen ? 
+                    '<span class="px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-xs"><i class="fas fa-check-circle"></i> OPEN</span>' :
+                    '<span class="px-3 py-1 bg-red-500/20 text-red-400 rounded-full text-xs"><i class="fas fa-lock"></i> CLOSED</span>';
+            }
+        }
+        
+        function updateWalletUI() {
+            const walletElements = document.querySelectorAll('.wallet-balance-display');
+            walletElements.forEach(el => {
+                el.innerHTML = formatCurrency(currentUserData?.walletBalance || 0);
+            });
+        }
+        
+        function updateNotificationsUI(notifications) {
+            const panel = document.getElementById('notifications-panel');
+            if (panel) {
+                if (notifications.length === 0) {
+                    panel.innerHTML = '<div class="text-center text-gray-500 py-8"><i class="fas fa-bell-slash text-4xl mb-2"></i><p>No notifications yet</p></div>';
+                } else {
+                    panel.innerHTML = notifications.map(n => `
+                        <div class="p-3 border-b border-gray-700 hover:bg-gray-800/50 transition cursor-pointer ${n.read ? 'opacity-70' : ''}" onclick="markNotificationRead('${n.id}')">
+                            <div class="flex items-start gap-3">
+                                <i class="fas ${n.icon || 'fa-bell'} mt-1 text-${n.color || 'purple'}-400"></i>
+                                <div class="flex-1">
+                                    <p class="text-sm">${n.message}</p>
+                                    <p class="text-xs text-gray-500 mt-1">${formatDate(n.timestamp)}</p>
+                                </div>
+                                ${!n.read ? '<span class="w-2 h-2 bg-purple-500 rounded-full"></span>' : ''}
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            }
+            
+            // Play sound for new unread notifications
+            const unreadCount = notifications.filter(n => !n.read).length;
+            if (unreadCount > 0 && unreadCount !== window._lastNotifCount) {
+                playSound('sound-notification');
+            }
+            window._lastNotifCount = unreadCount;
+        }
+        
+        function updateHallsUI() {
+            const hallsContainer = document.getElementById('halls-container');
+            if (hallsContainer) {
+                renderHallsList();
+            }
+        }
+        
+        function renderHallsList() {
+            const container = document.getElementById('halls-container');
+            if (!container) return;
+            
+            if (Object.keys(allHalls).length === 0) {
+                container.innerHTML = '<div class="col-span-full text-center text-gray-400 py-12"><i class="fas fa-building text-6xl mb-4"></i><p>No halls available yet.</p></div>';
+                return;
+            }
+            
+            container.innerHTML = Object.entries(allHalls).map(([id, hall]) => `
+                <div class="glass-card overflow-hidden fade-in" data-aos="fade-up">
+                    <img src="${hall.imageUrl || 'https://placehold.co/600x400/1e293b/667eea?text=' + encodeURIComponent(hall.name)}" alt="${hall.name}" class="w-full h-48 object-cover">
+                    <div class="p-5">
+                        <h3 class="text-xl font-bold mb-2">${hall.name}</h3>
+                        <p class="text-gray-400 text-sm mb-4">${hall.description || 'Premium accommodation with modern facilities'}</p>
+                        <div class="space-y-2 mb-4">
+                            ${Object.entries(hall.prices || {}).map(([bed, price]) => `
+                                <div class="flex justify-between items-center p-2 bg-white/5 rounded-lg">
+                                    <span class="text-sm">${bed}</span>
+                                    <span class="font-bold text-purple-400">${formatCurrency(price)}</span>
+                                    <span class="text-xs text-gray-400">${hall[`rooms_${bed.replace(/\s/g, '_')}`] || 0} left</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <button onclick="selectHallForBooking('${id}')" class="w-full gradient-bg py-2 rounded-lg font-semibold hover:opacity-90 transition">
+                            <i class="fas fa-book-open mr-2"></i>Book Now
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function selectHallForBooking(hallId) {
+            if (!portalStatus.isOpen) {
+                showToast("Portal is currently closed. Please try again later.", "error");
+                return;
+            }
+            navigateTo('booking', { hallId: hallId });
+        }
+        
+        function markNotificationRead(notificationId) {
+            db.ref(`notifications/${currentUser.uid}/${notificationId}/read`).set(true);
+        }
+        
+        // ============================================
+        // THEME MANAGEMENT
+        // ============================================
+        function toggleTheme() {
+            const currentTheme = document.body.getAttribute('data-theme') || 'dark';
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.body.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            showToast(`${newTheme === 'dark' ? 'Dark' : 'Light'} mode activated`, 'info');
+        }
+        
+        // Load saved theme
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        document.body.setAttribute('data-theme', savedTheme);
+        
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+        window.navigateTo = navigateTo;
+        window.loadView = loadView;
+        window.showToast = showToast;
+        window.showModal = showModal;
+        window.showInsufficientBalanceModal = showInsufficientBalanceModal;
+        window.triggerConfetti = triggerConfetti;
+        window.formatCurrency = formatCurrency;
+        window.formatDate = formatDate;
+        window.generateTransactionRef = generateTransactionRef;
+        window.playSound = playSound;
+        window.toggleTheme = toggleTheme;
+        window.selectHallForBooking = selectHallForBooking;
+        window.markNotificationRead = markNotificationRead;
+        window.currentUser = () => currentUser;
+        window.currentUserData = () => currentUserData;
+        window.db = db;
+        window.auth = auth;
+        window.storage = storage;
+        window.CLOUDINARY_CLOUD_NAME = CLOUDINARY_CLOUD_NAME;
+        window.CLOUDINARY_UPLOAD_PRESET = CLOUDINARY_UPLOAD_PRESET;
+        window.FLUTTERWAVE_PUBLIC_KEY = FLUTTERWAVE_PUBLIC_KEY;
+        window.FLUTTERWAVE_ENCRYPTION_KEY = FLUTTERWAVE_ENCRYPTION_KEY;
+        window.portalStatus = () => portalStatus;
+        window.allHalls = () => allHalls;
+        
+        // Handle browser back/forward
+        window.addEventListener('popstate', (event) => {
+            if (event.state && event.state.view) {
+                loadView(event.state.view, event.state.params || {});
+            } else {
+                loadView('auth');
+            }
+        });
+        
+        // Start with auth view
+        loadView('auth');
+    </script>
+</body>
+</html>
